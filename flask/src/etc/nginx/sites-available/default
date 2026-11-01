@@ -1,0 +1,9 @@
+# Replaced at first boot, once the application is configured.
+server {
+	listen 80 default_server;
+	listen [::]:80 default_server;
+	server_name _;
+
+	default_type text/plain;
+	return 503 "Flask is still setting up. Refresh in a minute.\n";
+}

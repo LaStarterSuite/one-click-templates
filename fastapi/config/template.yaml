@@ -1,0 +1,33 @@
+name: fastapi
+title: FastAPI
+description: A FastAPI app on Uvicorn behind nginx.
+categories: [framework, python]
+maintainers:
+  - github: frappe
+base_image:
+  os: Ubuntu
+  os_version: "24.04"
+  minimal: true
+minimum_size:
+  cpu_millicores: 500
+  memory_mib: 512
+  disk_mib: 5120
+ports:
+  - { port: 80, protocol: tcp }
+requires_site_name: true
+build:
+  files:
+    - { source: src/etc/, destination: /etc/ }
+    - { source: src/srv/, destination: /srv/ }
+    - { source: src/var/, destination: /var/ }
+health_check:
+  path: /health
+  port: 80
+inputs:
+  - name: greeting
+    label: Greeting
+    type: string
+    required: false
+    max_length: 80
+    pattern: "[A-Za-z0-9 ,.!?'-]+"
+    description: What the home page says. Defaults to "Hello from FastAPI".

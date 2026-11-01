@@ -1,0 +1,29 @@
+name: example
+title: Example
+description: One line shown in Central.
+categories: []
+maintainers:
+  - github: your-github-handle
+base_image:
+  os: Ubuntu
+  os_version: "24.04"
+  minimal: false
+minimum_size:
+  cpu_millicores: 1000
+  memory_mib: 1024
+  disk_mib: 10240
+ports:
+  - { port: 80, protocol: tcp }
+requires_site_name: false
+build:
+  files:
+    - { source: src/etc/, destination: /etc/ }
+    - { source: src/var/, destination: /var/ }
+health_check:
+  path: /
+  port: 80
+inputs:
+  - name: admin_email
+    label: Admin email
+    type: email
+    required: false

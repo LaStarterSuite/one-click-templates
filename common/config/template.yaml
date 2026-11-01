@@ -1,0 +1,5 @@
+# Copied before every application's files.
+build:
+  files:
+    - { source: src/etc/, destination: /etc/ }
+    - { source: src/usr/, destination: /usr/ }

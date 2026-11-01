@@ -1,0 +1,14 @@
+[Unit]
+Description=Flask application (Gunicorn)
+After=network.target
+
+[Service]
+User=app
+Group=app
+WorkingDirectory=/srv/app/src
+EnvironmentFile=/etc/one-click/app.env
+ExecStart=/srv/app/venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8000 main:app
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

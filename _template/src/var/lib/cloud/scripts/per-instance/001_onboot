@@ -1,0 +1,8 @@
+#!/bin/bash
+# Inputs: ADMIN_EMAIL
+set -euo pipefail
+. /usr/local/lib/one-click/lib.sh
+# Central sends the inputs as user data; a VM launched without them falls back to defaults.
+[ -f "$ONE_CLICK_INPUTS" ] && . "$ONE_CLICK_INPUTS"
+
+mark_ready
