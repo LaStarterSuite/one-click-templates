@@ -1,0 +1,3 @@
+# Clients connect over the network, so listen on every IPv4 and IPv6 address.
+[mysqld]
+bind-address = ::

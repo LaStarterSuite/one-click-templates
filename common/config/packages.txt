@@ -1,5 +1,4 @@
 ca-certificates
 curl
-jq
 openssl
 unzip

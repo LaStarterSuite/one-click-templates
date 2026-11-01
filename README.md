@@ -11,7 +11,7 @@ Each folder here describes one application that users can launch from Central as
 
    Then it stops the VM and Atlas snapshots its disk. Nothing secret or specific to one VM may be created at build time.
 2. **Launch (Central → Cargo → Atlas).** Central asks Cargo for the template's inputs and sends the answers back. Cargo validates them and returns user data that only writes them to `/etc/one-click/inputs.env`.
-3. **First boot (cloud-init).** The VM has a new instance ID, so cloud-init runs `/var/lib/cloud/scripts/per-instance/001_onboot` once. It reads the inputs, generates secrets, configures the application and nginx, and writes `/var/lib/one-click/ready`. Reboots do not run it again.
+3. **First boot (cloud-init).** The VM has a new instance ID, so cloud-init runs `/var/lib/cloud/scripts/per-instance/001_onboot` once. It reads the inputs, generates secrets, configures the service, and writes `/var/lib/one-click/ready`. Reboots do not run it again.
 
 ## Layout
 
@@ -33,41 +33,37 @@ _template/                      Copy this to start a new template
 ## template.yaml
 
 ```yaml
-name: fastapi                   # Folder name; lowercase letters, digits and hyphens
-title: FastAPI
+name: redis                     # Folder name; lowercase letters, digits and hyphens
+title: Redis
 description: One line shown in Central.
-categories: [cms]
+categories: [database]
 maintainers:
   - github: frappe
 base_image:                     # Atlas system image tags Cargo boots the build on
   os: Ubuntu
   os_version: "24.04"
-  minimal: false
-minimum_size:                   # Central hides smaller plans
-  cpu_millicores: 1000
-  memory_mib: 1024
-  disk_mib: 10240
-ports:                          # Atlas firewall rules Central opens; SSH is always open
-  - { port: 80, protocol: tcp }         # The regional proxy serves HTTPS and sends HTTP to port 80
-requires_site_name: true        # Central refuses a server without a site name; absent means optional
+  minimal: true
+minimum_size:                   # Central hides smaller plans and refuses them at creation
+  cpu_millicores: 500
+  memory_mib: 512
+  disk_mib: 5120
+ports:                          # The ports the service listens on, for the user; Central opens none
+  - { port: 6379, protocol: tcp }
 build:
   files:                        # Copied in order; a folder source ends in / and its contents go into destination
     - { source: src/etc/, destination: /etc/ }    # source inside src/; destination under /etc, /opt, /srv, /usr or /var
     - { source: src/var/, destination: /var/ }
-health_check:                   # What Central polls to show the app as ready
-  path: /
-  port: 80
 inputs:                         # Asked in Central, validated by Cargo
-  - name: greeting              # Becomes GREETING in inputs.env
-    label: Greeting
-    type: string                # string | email | domain | password
-    required: false
-    max_length: 80
-    pattern: "[A-Za-z0-9 ,.!?'-]+"
-  - name: admin_password
-    label: Admin password
-    type: password
+  - name: redis_password        # Becomes REDIS_PASSWORD in inputs.env
+    label: Password
+    type: password              # string | email | domain | password
     generate: true              # Left out when blank; 001_onboot makes one on the VM
+  - name: database
+    label: Database
+    type: string
+    required: false
+    max_length: 64
+    pattern: "[a-z][a-z0-9_]*"
 ```
 
 Input rules Cargo enforces: `name` matches `^[a-z][a-z0-9_]*$`; `string` accepts an optional `pattern` and `max_length` (default 255); `domain` and `email` are checked by type; `password` is at least 12 characters. Values never reach a shell unquoted: Cargo writes them as `KEY='value'` lines with shell quoting.
@@ -83,9 +79,9 @@ Input rules Cargo enforces: `name` matches `^[a-z][a-z0-9_]*$`; `string` accepts
 ## Rules for 001_onboot
 
 - Inputs are optional: the VM may be launched without user data. Load `/etc/one-click/inputs.env` only if it exists, and give every input a default or generate it with `openssl rand`.
-- Source `/usr/local/lib/one-click/lib.sh` for `metadata`, `configure_nginx`, `wait_for`, `save_credential` and `mark_ready`.
-- Pipe the nginx site into `configure_nginx`. Listen on port 80 for IPv4 and IPv6 with `server_name _`. The regional proxy serves the VM's site names over HTTPS and sends HTTP to port 80, so pass its `X-Forwarded-Proto` through instead of `$scheme`.
-- Generate secrets such as an app's secret key with `openssl rand`. Store them, and any setting the app reads, with `save_credential KEY value`. It appends to `/etc/one-click/app.env` (mode 0640, owner `root:app`), which only the app's unit loads through `EnvironmentFile=`. Secrets never leave the VM.
+- Source `/usr/local/lib/one-click/lib.sh` for `metadata`, `wait_for`, `save_credential` and `mark_ready`.
+- Listen on every IPv4 and IPv6 address, and require a password. Without a public address the server is reachable only on the region's private network, which other servers share.
+- Generate secrets such as a password with `openssl rand`. Store them, and every setting the user needs to connect, with `save_credential KEY value`. It appends to `/etc/one-click/app.env` (mode 0600, owner `root`), which the user reads over SSH. Secrets never leave the VM.
 - Finish with `mark_ready`. Output goes to `/var/log/cloud-init-output.log`.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) to add a template.

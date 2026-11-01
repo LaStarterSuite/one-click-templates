@@ -1,0 +1,27 @@
+#!/bin/bash
+# Inputs: REDIS_PASSWORD
+set -euo pipefail
+. /usr/local/lib/one-click/lib.sh
+# Central sends the inputs as user data; a VM launched without them falls back to defaults.
+[ -f "$ONE_CLICK_INPUTS" ] && . "$ONE_CLICK_INPUTS"
+
+REDIS_PASSWORD=${REDIS_PASSWORD:-$(openssl rand -hex 24)}
+save_credential REDIS_PASSWORD "$REDIS_PASSWORD"
+
+# Redis reads a double-quoted value with backslash escapes, so any password reads back as written.
+password=${REDIS_PASSWORD//\\/\\\\}
+password=${password//\"/\\\"}
+install -m 0640 -o redis -g redis /dev/null /etc/redis/one-click.conf
+cat > /etc/redis/one-click.conf <<CONF
+bind * -::*
+requirepass "$password"
+CONF
+
+systemctl restart redis-server
+
+redis_answers() {
+	REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli --no-auth-warning ping | grep -q PONG
+}
+wait_for 30 redis_answers
+
+mark_ready

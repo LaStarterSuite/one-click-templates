@@ -11,7 +11,7 @@ A pull request is reviewed for:
 - No secret, key or VM-specific value created at build time.
 - Downloads pinned to a version and verified with a checksum.
 - No user input interpolated into a shell command or config without quoting.
-- `001_onboot` ending in `mark_ready`, and the health check answering after it.
+- `001_onboot` waiting until the service answers, then ending in `mark_ready`.
 - A maintainer listed in `config/template.yaml` who will answer issues about the template.
 
 Merging builds the image in Cargo. A template whose build fails twice in a row is hidden from Central until fixed.

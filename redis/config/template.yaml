@@ -1,0 +1,26 @@
+name: redis
+title: Redis
+description: An in-memory key-value store, reachable with a password on port 6379.
+categories: [database, cache]
+maintainers:
+  - github: frappe
+base_image:
+  os: Ubuntu
+  os_version: "24.04"
+  minimal: true
+minimum_size:
+  cpu_millicores: 500
+  memory_mib: 512
+  disk_mib: 5120
+ports:
+  - { port: 6379, protocol: tcp }
+build:
+  files:
+    - { source: src/etc/, destination: /etc/ }
+    - { source: src/var/, destination: /var/ }
+inputs:
+  - name: redis_password
+    label: Password
+    type: password
+    generate: true
+    description: Clients send it with AUTH. Leave blank to generate one; it is saved in /etc/one-click/app.env on the server.

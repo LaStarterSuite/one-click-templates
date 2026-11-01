@@ -1,0 +1,33 @@
+name: mariadb
+title: MariaDB
+description: A MySQL-compatible database server, reachable with a password on port 3306.
+categories: [database]
+maintainers:
+  - github: frappe
+base_image:
+  os: Ubuntu
+  os_version: "24.04"
+  minimal: true
+minimum_size:
+  cpu_millicores: 1000
+  memory_mib: 1024
+  disk_mib: 10240
+ports:
+  - { port: 3306, protocol: tcp }
+build:
+  files:
+    - { source: src/etc/, destination: /etc/ }
+    - { source: src/var/, destination: /var/ }
+inputs:
+  - name: mariadb_password
+    label: Admin password
+    type: password
+    generate: true
+    description: The password of the admin user. Leave blank to generate one; it is saved in /etc/one-click/app.env on the server.
+  - name: mariadb_database
+    label: Database
+    type: string
+    required: false
+    max_length: 64
+    pattern: "[a-z][a-z0-9_]*"
+    description: A database to create for the admin user. Leave blank to create none.

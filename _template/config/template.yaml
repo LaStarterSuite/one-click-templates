@@ -14,14 +14,10 @@ minimum_size:
   disk_mib: 10240
 ports:
   - { port: 80, protocol: tcp }
-requires_site_name: false
 build:
   files:
     - { source: src/etc/, destination: /etc/ }
     - { source: src/var/, destination: /var/ }
-health_check:
-  path: /
-  port: 80
 inputs:
   - name: admin_email
     label: Admin email

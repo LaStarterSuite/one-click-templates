@@ -1,0 +1,34 @@
+#!/bin/bash
+# Inputs: MARIADB_PASSWORD, MARIADB_DATABASE
+set -euo pipefail
+. /usr/local/lib/one-click/lib.sh
+# Central sends the inputs as user data; a VM launched without them falls back to defaults.
+[ -f "$ONE_CLICK_INPUTS" ] && . "$ONE_CLICK_INPUTS"
+
+MARIADB_USER=admin
+MARIADB_PASSWORD=${MARIADB_PASSWORD:-$(openssl rand -hex 24)}
+MARIADB_DATABASE=${MARIADB_DATABASE:-}
+# The name goes into SQL as an identifier, so refuse anything Cargo would refuse.
+if [ -n "$MARIADB_DATABASE" ] && ! [[ $MARIADB_DATABASE =~ ^[a-z][a-z0-9_]{0,63}$ ]]; then
+	echo "MARIADB_DATABASE must be lowercase letters, digits and underscores." >&2
+	exit 1
+fi
+save_credential MARIADB_USER "$MARIADB_USER"
+save_credential MARIADB_PASSWORD "$MARIADB_PASSWORD"
+save_credential MARIADB_DATABASE "$MARIADB_DATABASE"
+
+wait_for 60 mariadb-admin ping
+
+# The password goes in a SQL string, so its backslashes and quotes are escaped.
+password=${MARIADB_PASSWORD//\\/\\\\}
+password=${password//\'/\\\'}
+# root signs in through the local socket only; the admin user is the one for the network.
+mariadb <<SQL
+CREATE USER IF NOT EXISTS '$MARIADB_USER'@'%' IDENTIFIED BY '$password';
+GRANT ALL PRIVILEGES ON *.* TO '$MARIADB_USER'@'%' WITH GRANT OPTION;
+SQL
+if [ -n "$MARIADB_DATABASE" ]; then
+	mariadb -e "CREATE DATABASE IF NOT EXISTS \`$MARIADB_DATABASE\`"
+fi
+
+mark_ready
