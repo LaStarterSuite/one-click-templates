@@ -1,4 +1,4 @@
-# Frappe Marketplace One-Click Templates
+# Frappe Cloud One-Click Templates
 
 Each folder here describes one application that users can launch from Central as a ready-to-use virtual machine. Cargo builds every merged template into an Atlas image, and renders the template's cloud-init user data when a user launches it.
 
