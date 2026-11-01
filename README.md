@@ -1,6 +1,33 @@
 # Frappe Cloud One-Click Templates
 
-Each folder here describes one application that users can launch from Central as a ready-to-use virtual machine. Cargo builds every merged template into an Atlas image, and renders the template's cloud-init user data when a user launches it.
+Each folder here describes one service that users can launch from Central as a ready-to-use virtual machine. Cargo builds every merged template into an Atlas image, and renders the template's cloud-init user data when a user launches it.
+
+A template is for a service whose setup changes little from one user to the next, such as a database or a cache. The user picks a size and answers a few inputs, and the server is ready. An application framework such as Flask, Django or React is not a template: its setup depends on the user's own code, so it belongs to push-and-deploy, not here.
+
+## Templates
+
+| Template | Port | Inputs | Settings in `/etc/one-click/app.env` |
+| --- | --- | --- | --- |
+| [Redis](redis/) | 6379 | Password | `REDIS_PASSWORD` |
+| [MariaDB](mariadb/) | 3306 | Admin password, database | `MARIADB_USER` (`admin`), `MARIADB_PASSWORD`, `MARIADB_DATABASE` |
+
+A blank password input is generated on the server at first boot.
+
+## Connecting to a template server
+
+Central creates a template server as a normal server. It routes no web address to it and opens no port for it.
+
+- The service listens on every IPv4 and IPv6 address and requires a password.
+- Without a public address, the server is reachable only on the region's private network, at its private IPv6 address. Other servers in the region can reach it there.
+- To connect from outside the region, give the server a public address. If the server's firewall is on, add a rule for the service's port.
+- Read the password over SSH: `sudo cat /etc/one-click/app.env`. The login message says whether first boot has finished.
+
+For example, from another server in the region:
+
+```sh
+redis-cli -h <private IPv6 address> -a "$REDIS_PASSWORD" ping
+mariadb -h <private IPv6 address> -u admin -p
+```
 
 ## How a template becomes a running VM
 
@@ -33,8 +60,8 @@ _template/                      Copy this to start a new template
 ## template.yaml
 
 ```yaml
-name: redis                     # Folder name; lowercase letters, digits and hyphens
-title: Redis
+name: mariadb                   # Folder name; lowercase letters, digits and hyphens
+title: MariaDB
 description: One line shown in Central.
 categories: [database]
 maintainers:
@@ -44,26 +71,26 @@ base_image:                     # Atlas system image tags Cargo boots the build 
   os_version: "24.04"
   minimal: true
 minimum_size:                   # Central hides smaller plans and refuses them at creation
-  cpu_millicores: 500
-  memory_mib: 512
-  disk_mib: 5120
+  cpu_millicores: 1000
+  memory_mib: 1024
+  disk_mib: 10240
 ports:                          # The ports the service listens on, for the user; Central opens none
-  - { port: 6379, protocol: tcp }
+  - { port: 3306, protocol: tcp }
 build:
   files:                        # Copied in order; a folder source ends in / and its contents go into destination
     - { source: src/etc/, destination: /etc/ }    # source inside src/; destination under /etc, /opt, /srv, /usr or /var
     - { source: src/var/, destination: /var/ }
 inputs:                         # Asked in Central, validated by Cargo
-  - name: redis_password        # Becomes REDIS_PASSWORD in inputs.env
-    label: Password
+  - name: mariadb_password      # Becomes MARIADB_PASSWORD in inputs.env
+    label: Admin password
     type: password              # string | email | domain | password
     generate: true              # Left out when blank; 001_onboot makes one on the VM
-  - name: database
+  - name: mariadb_database
     label: Database
     type: string
     required: false
     max_length: 64
-    pattern: "[a-z][a-z0-9_]*"
+    pattern: "[a-z][a-z0-9_]*"  # Checked by Cargo; 001_onboot checks it again before it reaches SQL
 ```
 
 Input rules Cargo enforces: `name` matches `^[a-z][a-z0-9_]*$`; `string` accepts an optional `pattern` and `max_length` (default 255); `domain` and `email` are checked by type; `password` is at least 12 characters. Values never reach a shell unquoted: Cargo writes them as `KEY='value'` lines with shell quoting.
