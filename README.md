@@ -52,6 +52,7 @@ _template/                      Copy this to start a new app
 <name>/
   config/template.yaml          Manifest (below)
   config/packages.txt           apt packages, one per line; # comments allowed
+  config/logo.svg               Optional logo shown in Central
   src/                          Files listed in build.files; mirroring the VM's paths keeps it readable
   src/var/lib/cloud/scripts/per-instance/001_onboot   First-boot setup, executable
   scripts/*.sh                  Build scripts, run in name order
@@ -63,6 +64,7 @@ _template/                      Copy this to start a new app
 name: mariadb                   # Folder name; lowercase letters, digits and hyphens
 title: MariaDB
 description: One line shown in Central.
+logo: config/logo.svg           # Optional SVG inside the app folder, at most 32 KiB; Central shows a generic logo without it
 maintainers:
   - github: frappe
 base_image:                     # Atlas system image tags Cargo boots the build on

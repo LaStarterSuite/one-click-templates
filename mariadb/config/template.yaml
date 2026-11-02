@@ -1,6 +1,7 @@
 name: mariadb
 title: MariaDB
 description: A MySQL-compatible database server, reachable with a password on port 3306.
+logo: config/logo.svg
 maintainers:
   - github: frappe
 base_image:
