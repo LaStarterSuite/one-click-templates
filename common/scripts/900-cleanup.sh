@@ -14,7 +14,7 @@ rm -f /etc/ssh/ssh_host_*
 truncate -s 0 /etc/machine-id
 rm -f /var/lib/dbus/machine-id
 
-# Not `cloud-init clean`: it deletes /var/lib/cloud/scripts, which holds each template's 001_onboot.
+# Not `cloud-init clean`: it deletes /var/lib/cloud/scripts, which holds each app's 001_onboot.
 find /var/lib/cloud -mindepth 1 -maxdepth 1 ! -name scripts ! -name seed -exec rm -rf {} +
 rm -f /var/log/cloud-init*.log
 find /var/log -type f -exec truncate -s 0 {} +

@@ -1,10 +1,8 @@
 #!/bin/sh
-app=$(cat /etc/one-click/app 2>/dev/null || echo "One-Click")
-
 echo
 if [ -f /var/lib/one-click/ready ]; then
-	echo "$app is ready. Its settings and generated secrets are in /etc/one-click/app.env."
+	echo "Setup is finished. Settings and generated secrets are in /etc/one-click/app.env."
 else
-	echo "$app is still setting up. Follow it with: tail -f /var/log/cloud-init-output.log"
+	echo "Setup is still running. Follow it with: tail -f /var/log/cloud-init-output.log"
 fi
 echo

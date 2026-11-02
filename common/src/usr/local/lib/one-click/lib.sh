@@ -4,14 +4,6 @@ ONE_CLICK_INPUTS=/etc/one-click/inputs.env
 # The service's settings and generated secrets, for the user to read over SSH.
 ONE_CLICK_CREDENTIALS=/etc/one-click/app.env
 ONE_CLICK_READY=/var/lib/one-click/ready
-METADATA_URL=http://169.254.169.254/latest
-
-# Print one Atlas metadata value, such as public-ipv4 or local-hostname.
-metadata() {
-	local token
-	token=$(curl -fsS -X PUT -H "X-metadata-token-ttl-seconds: 60" "$METADATA_URL/api/token")
-	curl -fsS -H "X-metadata-token: $token" "$METADATA_URL/meta-data/$1"
-}
 
 # Run a command until it succeeds, for at most a given number of seconds.
 wait_for() {

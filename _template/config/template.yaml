@@ -1,7 +1,6 @@
 name: example
 title: Example
 description: One line shown in Central.
-categories: []
 maintainers:
   - github: your-github-handle
 base_image:

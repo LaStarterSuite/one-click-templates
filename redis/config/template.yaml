@@ -1,7 +1,6 @@
 name: redis
 title: Redis
 description: An in-memory key-value store, reachable with a password on port 6379.
-categories: [database, cache]
 maintainers:
   - github: frappe
 base_image:

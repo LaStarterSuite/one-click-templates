@@ -1,21 +1,21 @@
-# Frappe Cloud One-Click Templates
+# Frappe Cloud One-Click Apps
 
-Each folder here describes one service that users can launch from Central as a ready-to-use virtual machine. Cargo builds every merged template into an Atlas image, and renders the template's cloud-init user data when a user launches it.
+Each folder here describes one service that users can launch from Central as a ready-to-use virtual machine. Cargo builds every merged app into an Atlas image, and renders the app's cloud-init user data when a user launches it.
 
-A template is for a service whose setup changes little from one user to the next, such as a database or a cache. The user picks a size and answers a few inputs, and the server is ready. An application framework such as Flask, Django or React is not a template: its setup depends on the user's own code, so it belongs to push-and-deploy, not here.
+An app is for a service whose setup changes little from one user to the next, such as a database or a cache. The user picks a size and answers a few inputs, and the server is ready. An application framework such as Flask, Django or React is not an app here: its setup depends on the user's own code, so it belongs to push-and-deploy, not here.
 
-## Templates
+## Apps
 
-| Template | Port | Inputs | Settings in `/etc/one-click/app.env` |
+| App | Port | Inputs | Settings in `/etc/one-click/app.env` |
 | --- | --- | --- | --- |
 | [Redis](redis/) | 6379 | Password | `REDIS_PASSWORD` |
 | [MariaDB](mariadb/) | 3306 | Admin password, database | `MARIADB_USER` (`admin`), `MARIADB_PASSWORD`, `MARIADB_DATABASE` |
 
 A blank password input is generated on the server at first boot.
 
-## Connecting to a template server
+## Connecting to an app server
 
-Central creates a template server as a normal server. It routes no web address to it and opens no port for it.
+Central creates an app server as a normal server. It routes no web address to it and opens no port for it.
 
 - The service listens on every IPv4 and IPv6 address and requires a password.
 - Without a public address, the server is reachable only on the region's private network, at its private IPv6 address. Other servers in the region can reach it there.
@@ -29,26 +29,26 @@ redis-cli -h <private IPv6 address> -a "$REDIS_PASSWORD" ping
 mariadb -h <private IPv6 address> -u admin -p
 ```
 
-## How a template becomes a running VM
+## How an app becomes a running VM
 
 1. **Build (Cargo, on merge).** Cargo boots a temporary Atlas VM and, over SSH as root:
    1. installs the apt packages from `common/config/packages.txt` and `<name>/config/packages.txt`;
-   2. copies each `build.files` source to its destination, `common`'s first and then the template's;
+   2. copies each `build.files` source to its destination, `common`'s first and then the app's;
    3. runs `<name>/scripts/*.sh`, then `common/scripts/*.sh`, each in name order.
 
    Then it stops the VM and Atlas snapshots its disk. Nothing secret or specific to one VM may be created at build time.
-2. **Launch (Central → Cargo → Atlas).** Central asks Cargo for the template's inputs and sends the answers back. Cargo validates them and returns user data that only writes them to `/etc/one-click/inputs.env`.
+2. **Launch (Central → Cargo → Atlas).** Central asks Cargo for the app's inputs and sends the answers back. Cargo validates them and returns user data that only writes them to `/etc/one-click/inputs.env`.
 3. **First boot (cloud-init).** The VM has a new instance ID, so cloud-init runs `/var/lib/cloud/scripts/per-instance/001_onboot` once. It reads the inputs, generates secrets, configures the service, and writes `/var/lib/one-click/ready`. Reboots do not run it again.
 
 ## Layout
 
 ```
-common/                         Shared by every template
+common/                         Shared by every app
   config/packages.txt           Base apt packages
-  config/template.yaml          build.files copied before a template's own files
+  config/template.yaml          build.files copied before an app's own files
   src/
-  scripts/900-cleanup.sh        Runs after every template's scripts; makes the disk safe to snapshot
-_template/                      Copy this to start a new template
+  scripts/900-cleanup.sh        Runs after every app's scripts; makes the disk safe to snapshot
+_template/                      Copy this to start a new app
 <name>/
   config/template.yaml          Manifest (below)
   config/packages.txt           apt packages, one per line; # comments allowed
@@ -63,7 +63,6 @@ _template/                      Copy this to start a new template
 name: mariadb                   # Folder name; lowercase letters, digits and hyphens
 title: MariaDB
 description: One line shown in Central.
-categories: [database]
 maintainers:
   - github: frappe
 base_image:                     # Atlas system image tags Cargo boots the build on
@@ -106,9 +105,9 @@ Input rules Cargo enforces: `name` matches `^[a-z][a-z0-9_]*$`; `string` accepts
 ## Rules for 001_onboot
 
 - Inputs are optional: the VM may be launched without user data. Load `/etc/one-click/inputs.env` only if it exists, and give every input a default or generate it with `openssl rand`.
-- Source `/usr/local/lib/one-click/lib.sh` for `metadata`, `wait_for`, `save_credential` and `mark_ready`.
+- Source `/usr/local/lib/one-click/lib.sh` for `wait_for`, `save_credential` and `mark_ready`.
 - Listen on every IPv4 and IPv6 address, and require a password. Without a public address the server is reachable only on the region's private network, which other servers share.
 - Generate secrets such as a password with `openssl rand`. Store them, and every setting the user needs to connect, with `save_credential KEY value`. It appends to `/etc/one-click/app.env` (mode 0600, owner `root`), which the user reads over SSH. Secrets never leave the VM.
 - Finish with `mark_ready`. Output goes to `/var/log/cloud-init-output.log`.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) to add a template.
+See [CONTRIBUTING.md](CONTRIBUTING.md) to add an app.
