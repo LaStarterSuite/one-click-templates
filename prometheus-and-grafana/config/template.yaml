@@ -14,7 +14,6 @@ minimum_size:
   disk_mib: 10240
 ports:
   - { port: 80, protocol: tcp }
-  - { port: 9090, protocol: tcp }
   - { port: 3000, protocol: tcp }
 build:
   files:
@@ -25,6 +24,10 @@ inputs:
     label: Prometheus password
     type: password
     description: The password of the admin user for the Prometheus web UI and API. Leave blank to generate one; it is saved in /etc/one-click/app.env on the server.
+  - name: push_password
+    label: Push password
+    type: password
+    description: The password other servers use to send their metrics, which opens nothing else. Leave blank to generate one; it is saved in /etc/one-click/app.env on the server.
   - name: grafana_password
     label: Grafana password
     type: password

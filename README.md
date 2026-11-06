@@ -10,7 +10,7 @@ An app is for a service whose setup changes little from one user to the next, su
 | --- | --- | --- | --- |
 | [Redis](redis/) | 6379 | Password | `REDIS_PASSWORD` |
 | [MariaDB](mariadb/) | 3306 | Admin password, database | `MARIADB_USER` (`admin`), `MARIADB_PASSWORD`, `MARIADB_DATABASE` |
-| [Prometheus and Grafana](prometheus-and-grafana/) | 80, 9090, 3000 | Prometheus password, Grafana password | `PROMETHEUS_USER` (`admin`), `PROMETHEUS_PASSWORD`, `GRAFANA_USER` (`admin`), `GRAFANA_PASSWORD` |
+| [Prometheus and Grafana](prometheus-and-grafana/) | 80, 3000 | Prometheus password, push password, Grafana password | `PROMETHEUS_USER` (`admin`), `PROMETHEUS_PASSWORD`, `PUSH_USER` (`push`), `PUSH_PASSWORD`, `GRAFANA_USER` (`admin`), `GRAFANA_PASSWORD` |
 
 An input that is not `required` may be left blank, and the server generates its value at first boot.
 

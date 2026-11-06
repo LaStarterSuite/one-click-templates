@@ -2,11 +2,7 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  # Prometheus asks for the admin password, so it sends it to scrape itself.
   - job_name: prometheus
     metrics_path: /prometheus/metrics
-    basic_auth:
-      username: admin
-      password_file: /etc/prometheus/password
     static_configs:
       - targets: ["localhost:9090"]

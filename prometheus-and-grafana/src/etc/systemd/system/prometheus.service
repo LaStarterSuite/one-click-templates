@@ -2,8 +2,6 @@
 Description=Prometheus
 Wants=network-online.target
 After=network-online.target
-# First boot writes the password; until then Prometheus stays stopped instead of open.
-ConditionPathExists=/etc/prometheus/web.yml
 
 [Service]
 User=prometheus
@@ -11,10 +9,10 @@ Group=prometheus
 ExecStart=/usr/local/bin/prometheus \
 	--config.file=/etc/prometheus/prometheus.yml \
 	--storage.tsdb.path=/var/lib/prometheus \
-	--web.config.file=/etc/prometheus/web.yml \
-	--web.listen-address=:9090 \
+	--web.listen-address=127.0.0.1:9090 \
 	--web.external-url=/prometheus/ \
-	--web.route-prefix=/prometheus
+	--web.route-prefix=/prometheus \
+	--web.enable-remote-write-receiver
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 
