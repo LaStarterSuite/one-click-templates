@@ -2,7 +2,7 @@
 
 1. Copy `_template/` to a folder named after the application, and set `name` in `config/template.yaml` to match.
 2. List apt packages in `config/packages.txt`, put the files the VM needs under `src/` and list each source and destination under `build.files` in `config/template.yaml`, write the build in `scripts/`, and the per-VM setup in `src/var/lib/cloud/scripts/per-instance/001_onboot` (executable: `git add --chmod=+x`).
-3. Declare every value the user may provide under `inputs`, with a default or `generate: true` in `001_onboot` for each.
+3. Declare every value the user may provide under `inputs`. Mark it `required: true`, or give it a default or a generated value in `001_onboot`.
 4. Test the build on a fresh Ubuntu VM: install `common/config/packages.txt` and your `config/packages.txt`, copy each `build.files` entry of `common` and then yours, run your scripts in name order, then write `/etc/one-click/inputs.env` by hand and run `001_onboot`.
 5. Open a pull request with what the app installs, which versions, and how you tested it.
 

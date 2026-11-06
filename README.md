@@ -10,8 +10,9 @@ An app is for a service whose setup changes little from one user to the next, su
 | --- | --- | --- | --- |
 | [Redis](redis/) | 6379 | Password | `REDIS_PASSWORD` |
 | [MariaDB](mariadb/) | 3306 | Admin password, database | `MARIADB_USER` (`admin`), `MARIADB_PASSWORD`, `MARIADB_DATABASE` |
+| [Prometheus and Grafana](prometheus-and-grafana/) | 80, 9090, 3000 | Prometheus password, Grafana password | `PROMETHEUS_USER` (`admin`), `PROMETHEUS_PASSWORD`, `GRAFANA_USER` (`admin`), `GRAFANA_PASSWORD` |
 
-A blank password input is generated on the server at first boot.
+An input that is not `required` may be left blank, and the server generates its value at first boot.
 
 ## Connecting to an app server
 
@@ -81,20 +82,21 @@ build:
   files:                        # Copied in order; a folder source ends in / and its contents go into destination
     - { source: src/etc/, destination: /etc/ }    # source inside src/; destination under /etc, /opt, /srv, /usr or /var
     - { source: src/var/, destination: /var/ }
-inputs:                         # Asked in Central, validated by Cargo
+inputs:                         # Asked and validated in Central
   - name: mariadb_password      # Becomes MARIADB_PASSWORD in inputs.env
     label: Admin password
-    type: password              # string | email | domain | password
-    generate: true              # Left out when blank; 001_onboot makes one on the VM
+    type: password              # string | email | domain | password; optional, so 001_onboot makes one when blank
   - name: mariadb_database
     label: Database
     type: string
     required: false
     max_length: 64
-    pattern: "[a-z][a-z0-9_]*"  # Checked by Cargo; 001_onboot checks it again before it reaches SQL
+    pattern: "[a-z][a-z0-9_]*"  # Checked by Central; 001_onboot checks it again before it reaches SQL
 ```
 
-Input rules Cargo enforces: `name` matches `^[a-z][a-z0-9_]*$`; `string` accepts an optional `pattern` and `max_length` (default 255); `domain` and `email` are checked by type; `password` is at least 12 characters. Values never reach a shell unquoted: Cargo writes them as `KEY='value'` lines with shell quoting.
+An app with a `site_name` input gets a web address: Central routes `<site_name>.<region zone>` to the server's port 80 through the regional proxy, which ends HTTPS, and adds the full name as `SITE_DOMAIN` to `inputs.env`.
+
+Input rules Central enforces: `name` matches `^[a-z][a-z0-9_]*$`; every input accepts an optional `pattern` and `max_length` (default 255); `domain` and `email` are checked by type; `password` must not be easy to guess. A blank optional input is left out. Values never reach a shell unquoted: Central writes them as `KEY='value'` lines with shell quoting.
 
 ## Rules for build scripts
 

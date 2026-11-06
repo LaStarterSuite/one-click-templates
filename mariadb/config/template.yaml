@@ -22,7 +22,6 @@ inputs:
   - name: mariadb_password
     label: Admin password
     type: password
-    generate: true
     description: The password of the admin user. Leave blank to generate one; it is saved in /etc/one-click/app.env on the server.
   - name: mariadb_database
     label: Database
