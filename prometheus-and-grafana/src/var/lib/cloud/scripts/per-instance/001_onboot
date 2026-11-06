@@ -32,20 +32,27 @@ GRAFANA_PASSWORD=${GRAFANA_PASSWORD:-$(openssl rand -hex 24)}
 save_credential GRAFANA_USER "$GRAFANA_USER"
 save_credential GRAFANA_PASSWORD "$GRAFANA_PASSWORD"
 
+# Grafana sets the admin password only when it creates its database, so a database from the image is dropped.
+systemctl stop grafana-server
+rm -f /var/lib/grafana/grafana.db
+
 install -d -m 0750 -o root -g grafana /etc/grafana/one-click
 install -m 0640 -o root -g grafana /dev/null /etc/grafana/one-click/admin_password
 printf '%s' "$GRAFANA_PASSWORD" > /etc/grafana/one-click/admin_password
 install -m 0640 -o root -g grafana /dev/null /etc/grafana/one-click/secret_key
 openssl rand -hex 32 | tr -d '\n' > /etc/grafana/one-click/secret_key
 
-# Grafana builds the links in its alerts from its public address.
+# Grafana builds the links in its alerts from its public address, and trusts logins from it behind the proxy.
 if [ -n "${SITE_DOMAIN:-}" ]; then
 	if ! [[ $SITE_DOMAIN =~ ^[a-z0-9.-]+$ ]]; then
 		echo "SITE_DOMAIN must be a domain name." >&2
 		exit 1
 	fi
 	save_credential SITE_DOMAIN "$SITE_DOMAIN"
-	echo "GF_SERVER_ROOT_URL=https://$SITE_DOMAIN/" > /etc/grafana/one-click/grafana.env
+	cat > /etc/grafana/one-click/grafana.env <<CONF
+GF_SERVER_ROOT_URL=https://$SITE_DOMAIN/
+GF_SECURITY_CSRF_TRUSTED_ORIGINS=$SITE_DOMAIN
+CONF
 fi
 
 # A single-quoted YAML value doubles its quotes, and Grafana reads $ as an environment variable unless doubled.

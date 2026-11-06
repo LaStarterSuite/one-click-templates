@@ -1,6 +1,7 @@
 name: prometheus-and-grafana
 title: Prometheus and Grafana
 description: Prometheus to collect and store metrics, and Grafana to chart them, each behind a password.
+logo: config/logo.svg
 maintainers:
   - github: frappe
 base_image:
