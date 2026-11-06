@@ -1,5 +1,5 @@
 #!/bin/bash
-# Inputs: PROMETHEUS_PASSWORD, GRAFANA_PASSWORD, SITE_NAME, SITE_DOMAIN
+# Inputs: PROMETHEUS_PASSWORD, PUSH_PASSWORD, GRAFANA_PASSWORD, SITE_NAME, SITE_DOMAIN
 set -euo pipefail
 . /usr/local/lib/one-click/lib.sh
 # Central sends the inputs as user data; a VM launched without them falls back to defaults.
@@ -10,22 +10,22 @@ PROMETHEUS_PASSWORD=${PROMETHEUS_PASSWORD:-$(openssl rand -hex 24)}
 save_credential PROMETHEUS_USER "$PROMETHEUS_USER"
 save_credential PROMETHEUS_PASSWORD "$PROMETHEUS_PASSWORD"
 
-# htpasswd reads the password from stdin, so it never shows in the process list.
-hash=$(printf '%s' "$PROMETHEUS_PASSWORD" | htpasswd -niBC 10 "$PROMETHEUS_USER" | cut -d: -f2-)
-install -m 0640 -o root -g prometheus /dev/null /etc/prometheus/web.yml
-cat > /etc/prometheus/web.yml <<CONF
-basic_auth_users:
-  $PROMETHEUS_USER: '$hash'
-CONF
-install -m 0640 -o root -g prometheus /dev/null /etc/prometheus/password
-printf '%s' "$PROMETHEUS_PASSWORD" > /etc/prometheus/password
+PUSH_USER=push
+PUSH_PASSWORD=${PUSH_PASSWORD:-$(openssl rand -hex 24)}
+save_credential PUSH_USER "$PUSH_USER"
+save_credential PUSH_PASSWORD "$PUSH_PASSWORD"
 
-systemctl restart prometheus
-
-prometheus_asks_for_password() {
-	[ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:9090/prometheus/-/ready)" = 401 ]
+# nginx asks for these logins; Prometheus itself listens only on localhost.
+# nginx checks a login on every request, so it uses SHA-512 crypt, which is fast, not bcrypt.
+# openssl reads the password from stdin, so it never shows in the process list.
+write_login() {
+	install -m 0640 -o root -g www-data /dev/null "$1"
+	echo "$2:$(printf '%s' "$3" | openssl passwd -6 -stdin)" > "$1"
 }
-wait_for 60 prometheus_asks_for_password
+install -d -m 0755 /etc/nginx/one-click
+write_login /etc/nginx/one-click/prometheus.htpasswd "$PROMETHEUS_USER" "$PROMETHEUS_PASSWORD"
+write_login /etc/nginx/one-click/push.htpasswd "$PUSH_USER" "$PUSH_PASSWORD"
+systemctl reload nginx
 
 GRAFANA_USER=admin
 GRAFANA_PASSWORD=${GRAFANA_PASSWORD:-$(openssl rand -hex 24)}
@@ -49,29 +49,12 @@ if [ -n "${SITE_DOMAIN:-}" ]; then
 		exit 1
 	fi
 	save_credential SITE_DOMAIN "$SITE_DOMAIN"
+	sed -i "s|__PUSH_URL__|https://$SITE_DOMAIN/prometheus/api/v1/write|" /var/www/one-click/connect.sh
 	cat > /etc/grafana/one-click/grafana.env <<CONF
 GF_SERVER_ROOT_URL=https://$SITE_DOMAIN/
 GF_SECURITY_CSRF_TRUSTED_ORIGINS=$SITE_DOMAIN
 CONF
 fi
-
-# A single-quoted YAML value doubles its quotes, and Grafana reads $ as an environment variable unless doubled.
-datasource_password=${PROMETHEUS_PASSWORD//\'/\'\'}
-datasource_password=${datasource_password//\$/\$\$}
-install -m 0640 -o root -g grafana /dev/null /etc/grafana/provisioning/datasources/prometheus.yaml
-cat > /etc/grafana/provisioning/datasources/prometheus.yaml <<CONF
-apiVersion: 1
-datasources:
-  - name: Prometheus
-    type: prometheus
-    uid: prometheus
-    url: http://localhost:9090/prometheus
-    isDefault: true
-    basicAuth: true
-    basicAuthUser: $PROMETHEUS_USER
-    secureJsonData:
-      basicAuthPassword: '$datasource_password'
-CONF
 
 systemctl restart grafana-server
 
