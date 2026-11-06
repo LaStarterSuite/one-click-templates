@@ -22,5 +22,4 @@ inputs:
   - name: redis_password
     label: Password
     type: password
-    generate: true
     description: Clients send it with AUTH. Leave blank to generate one; it is saved in /etc/one-click/app.env on the server.

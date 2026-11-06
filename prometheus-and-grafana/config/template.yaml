@@ -1,0 +1,36 @@
+name: prometheus-and-grafana
+title: Prometheus and Grafana
+description: Prometheus to collect and store metrics, and Grafana to chart them, each behind a password.
+maintainers:
+  - github: frappe
+base_image:
+  os: Ubuntu
+  os_version: "24.04"
+  minimal: true
+minimum_size:
+  cpu_millicores: 1000
+  memory_mib: 1024
+  disk_mib: 10240
+ports:
+  - { port: 80, protocol: tcp }
+  - { port: 9090, protocol: tcp }
+  - { port: 3000, protocol: tcp }
+build:
+  files:
+    - { source: src/etc/, destination: /etc/ }
+    - { source: src/var/, destination: /var/ }
+inputs:
+  - name: prometheus_password
+    label: Prometheus password
+    type: password
+    description: The password of the admin user for the Prometheus web UI and API. Leave blank to generate one; it is saved in /etc/one-click/app.env on the server.
+  - name: grafana_password
+    label: Grafana password
+    type: password
+    description: The password of the Grafana admin user. Leave blank to generate one; it is saved in /etc/one-click/app.env on the server.
+  # Central routes <site_name>.<region zone> to this server: Grafana at /, Prometheus at /prometheus.
+  - name: site_name
+    label: Site name
+    type: string
+    description: The name of the site, such as metrics for metrics.<region domain>. Grafana opens at / and Prometheus at /prometheus.
+    required: true

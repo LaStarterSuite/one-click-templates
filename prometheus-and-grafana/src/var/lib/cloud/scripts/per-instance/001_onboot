@@ -1,0 +1,76 @@
+#!/bin/bash
+# Inputs: PROMETHEUS_PASSWORD, GRAFANA_PASSWORD, SITE_NAME, SITE_DOMAIN
+set -euo pipefail
+. /usr/local/lib/one-click/lib.sh
+# Central sends the inputs as user data; a VM launched without them falls back to defaults.
+[ -f "$ONE_CLICK_INPUTS" ] && . "$ONE_CLICK_INPUTS"
+
+PROMETHEUS_USER=admin
+PROMETHEUS_PASSWORD=${PROMETHEUS_PASSWORD:-$(openssl rand -hex 24)}
+save_credential PROMETHEUS_USER "$PROMETHEUS_USER"
+save_credential PROMETHEUS_PASSWORD "$PROMETHEUS_PASSWORD"
+
+# htpasswd reads the password from stdin, so it never shows in the process list.
+hash=$(printf '%s' "$PROMETHEUS_PASSWORD" | htpasswd -niBC 10 "$PROMETHEUS_USER" | cut -d: -f2-)
+install -m 0640 -o root -g prometheus /dev/null /etc/prometheus/web.yml
+cat > /etc/prometheus/web.yml <<CONF
+basic_auth_users:
+  $PROMETHEUS_USER: '$hash'
+CONF
+install -m 0640 -o root -g prometheus /dev/null /etc/prometheus/password
+printf '%s' "$PROMETHEUS_PASSWORD" > /etc/prometheus/password
+
+systemctl restart prometheus
+
+prometheus_asks_for_password() {
+	[ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:9090/prometheus/-/ready)" = 401 ]
+}
+wait_for 60 prometheus_asks_for_password
+
+GRAFANA_USER=admin
+GRAFANA_PASSWORD=${GRAFANA_PASSWORD:-$(openssl rand -hex 24)}
+save_credential GRAFANA_USER "$GRAFANA_USER"
+save_credential GRAFANA_PASSWORD "$GRAFANA_PASSWORD"
+
+install -d -m 0750 -o root -g grafana /etc/grafana/one-click
+install -m 0640 -o root -g grafana /dev/null /etc/grafana/one-click/admin_password
+printf '%s' "$GRAFANA_PASSWORD" > /etc/grafana/one-click/admin_password
+install -m 0640 -o root -g grafana /dev/null /etc/grafana/one-click/secret_key
+openssl rand -hex 32 | tr -d '\n' > /etc/grafana/one-click/secret_key
+
+# Grafana builds the links in its alerts from its public address.
+if [ -n "${SITE_DOMAIN:-}" ]; then
+	if ! [[ $SITE_DOMAIN =~ ^[a-z0-9.-]+$ ]]; then
+		echo "SITE_DOMAIN must be a domain name." >&2
+		exit 1
+	fi
+	save_credential SITE_DOMAIN "$SITE_DOMAIN"
+	echo "GF_SERVER_ROOT_URL=https://$SITE_DOMAIN/" > /etc/grafana/one-click/grafana.env
+fi
+
+# A single-quoted YAML value doubles its quotes, and Grafana reads $ as an environment variable unless doubled.
+datasource_password=${PROMETHEUS_PASSWORD//\'/\'\'}
+datasource_password=${datasource_password//\$/\$\$}
+install -m 0640 -o root -g grafana /dev/null /etc/grafana/provisioning/datasources/prometheus.yaml
+cat > /etc/grafana/provisioning/datasources/prometheus.yaml <<CONF
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    url: http://localhost:9090/prometheus
+    isDefault: true
+    basicAuth: true
+    basicAuthUser: $PROMETHEUS_USER
+    secureJsonData:
+      basicAuthPassword: '$datasource_password'
+CONF
+
+systemctl restart grafana-server
+
+grafana_answers() {
+	curl -fs -o /dev/null http://127.0.0.1:3000/api/health
+}
+wait_for 120 grafana_answers
+
+mark_ready
