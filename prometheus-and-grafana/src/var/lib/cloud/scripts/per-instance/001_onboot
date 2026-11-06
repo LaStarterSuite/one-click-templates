@@ -25,6 +25,7 @@ write_login() {
 install -d -m 0755 /etc/nginx/one-click
 write_login /etc/nginx/one-click/prometheus.htpasswd "$PROMETHEUS_USER" "$PROMETHEUS_PASSWORD"
 write_login /etc/nginx/one-click/push.htpasswd "$PUSH_USER" "$PUSH_PASSWORD"
+wait_for 60 systemctl is-active --quiet nginx
 systemctl reload nginx
 
 GRAFANA_USER=admin
