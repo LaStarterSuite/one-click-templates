@@ -76,7 +76,7 @@ minimum_size:                   # Central hides smaller plans and refuses them a
   cpu_millicores: 1000
   memory_mib: 1024
   disk_mib: 10240
-ports:                          # The ports the service listens on, for the user; Central opens none
+ports:                          # The ports the service listens on; Central does not use them yet
   - { port: 3306, protocol: tcp }
 build:
   files:                        # Copied in order; a folder source ends in / and its contents go into destination
